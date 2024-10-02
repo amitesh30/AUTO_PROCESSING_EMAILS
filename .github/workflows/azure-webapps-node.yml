@@ -1,0 +1,52 @@
+pr: none
+trigger: none
+
+variables:
+- group: AIML
+
+stages:
+- stage: 'Dev'
+  displayName: 'Dev'
+  jobs:
+  - job: "Provision_Dev"
+    displayName: "Provision Dev resources"
+    pool:
+      name: 'Self-hosted'  # Use the self-hosted agent pool
+      timeoutInMinutes: 0  # No timeout for this job
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    - task: CopyFiles@2
+      displayName: 'Copy Files to: $(build.artifactstagingdirectory)/Templates'
+      inputs:
+        SourceFolder: deployment
+        Contents: '*.json'
+        TargetFolder: '$(build.artifactstagingdirectory)/Templates'
+
+    - task: Npm@1
+      displayName: 'npm custom'
+      inputs:
+        command: custom
+        verbose: false
+        customCommand: 'install --production'
+
+    - task: ArchiveFiles@2
+      displayName: 'Archive $(Build.SourcesDirectory)'
+      inputs:
+        rootFolderOrFile: '$(Build.SourcesDirectory)'
+        includeRootFolder: false
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: drop'
+
+    - task: AzureResourceGroupDeployment@2
+      inputs:
+        azureSubscription: 'AIMLALFA'
+        action: 'Create Or Update Resource Group'
+        resourceGroupName: "AIML"
+        location: 'East US'
+        templateLocation: 'Linked artifact'
+        csmFile: '$(Build.SourcesDirectory)/environment_setup/cloud-environment.json'
+        overrideParameters: '-baseName AIML -location $(LOCATION) -workspace $(WORKSPACE_NAME)'
+        deploymentMode: 'Incremental'
+      displayName: 'Deploy OH resources to Azure'
