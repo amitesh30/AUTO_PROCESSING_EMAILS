@@ -1,0 +1,65 @@
+# trigger:
+# - main
+# pr: none
+
+# variables:
+#   KEY_VAULT_NAME: 'trialamitesh'
+#   STORAGE_ACCOUNT_NAME: 'amitesh123'  # Ensure this is defined
+#   LOCATION: 'East US'
+#   RESOURCE_GROUP: "AIML"
+
+# stages:
+#   - stage: 'Dev'
+#     displayName: 'Dev Stage'
+#     jobs:
+#       - job: "Provision_Dev"
+#         displayName: "Provision Dev resources"
+#         pool:
+#           name: 'Self-hosted'  # Use the self-hosted agent pool
+#         timeoutInMinutes: 0  # No timeout for this job
+#         steps:
+#           - task: AzureResourceGroupDeployment@2
+#             inputs:
+#               azureSubscription: 'AIMLALFA'  # Azure service connection
+#               action: 'Create Or Update Resource Group'  # Action to create or update the resource group
+#               resourceGroupName: '$(RESOURCE_GROUP)'  # Resource group from variable
+#               location: '$(LOCATION)'  # Location from variable
+#               templateLocation: 'Linked artifact'  # Location of ARM template
+#               csmFile: '$(Build.SourcesDirectory)/environment_setup/cloud-environment.json'  # Path to ARM template
+#               overrideParameters: |
+#                 -name $(KEY_VAULT_NAME)            # Remove single quotes
+#                 -storageAccountName $(STORAGE_ACCOUNT_NAME)  # Remove single quotes
+#                 -location $(LOCATION)              # Remove single quotes
+
+#               deploymentMode: 'Incremental'  # Incremental deployment
+#               displayName: 'Deploy OH resources to Azure'
+pr: none
+trigger: none
+
+variables:
+- group: AIML
+
+stages:
+- stage: 'Dev'
+  displayName: 'Dev'
+  jobs:
+  - job: "Provision_Dev"
+    displayName: "Provision Dev resources"
+    # pool:
+    pool:
+      name: 'Self-hosted'  # Use the self-hosted agent pool
+      timeoutInMinutes: 0  # No timeout for this job
+      vmImage: 'ubuntu-latest'
+    
+    steps:
+    - task: AzureResourceGroupDeployment@2
+      inputs:
+        azureSubscription: 'AIMLALFA'
+        action: 'Create Or Update Resource Group'
+        resourceGroupName: "AIML"
+        location: 'East US'
+        templateLocation: 'Linked artifact'
+        csmFile: '$(Build.SourcesDirectory)/environment_setup/cloud-environment.json'
+        overrideParameters: '-baseName AIML -location $(LOCATION) -workspace $(WORKSPACE_NAME)'
+        deploymentMode: 'Incremental'
+      displayName: 'Deploy OH resources to Azure'
